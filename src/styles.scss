@@ -1,1 +1,42 @@
-/* You can add global styles to this file, and also import other style files */
+:root{
+  --surface: #0d0d0d;
+  --on-surface: #e6e6e6;
+  --primary: #3b82f6;
+  --surface-container: color-mix(in srgb, var(--surface) 85%, white);
+  --surface-container-high: color-mix(in srgb, var(--surface) 80%, white);
+  --outline: color-mix(in srgb, var(--on-surface) 12%, var(--surface));
+  --muted: color-mix(in srgb, var(--on-surface) 55%, var(--surface));
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  background:var(--surface); color:var(--on-surface);
+}
+
+app-root {
+  display: block;
+  height: 100%;
+}
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px var(--surface-container) inset !important;
+          box-shadow: 0 0 0 1000px var(--surface-container) inset !important;
+
+  -webkit-text-fill-color: var(--on-surface) !important;
+  caret-color: var(--on-surface) !important;
+
+  transition: background-color 99999s ease-out 0s;
+  border-radius: inherit;
+}
+
+input:-moz-autofill {
+  box-shadow: 0 0 0 1000px var(--surface-container) inset !important;
+  -moz-text-fill-color: var(--on-surface) !important;
+  caret-color: var(--on-surface) !important;
+}

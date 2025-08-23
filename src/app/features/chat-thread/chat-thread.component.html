@@ -1,0 +1,34 @@
+<section class="chat-wrap" #wrap aria-live="polite" aria-label="Conversation">
+  <div class="msg-group" *ngFor="let g of groups">
+    <div class="meta" *ngIf="g.showHeader">
+      <img *ngIf="g.avatarUrl" [ngSrc]="g.avatarUrl" width="28" height="28" class="avatar" alt="" />
+      <span class="who">{{ g.name }}</span>
+      <span class="when">{{ g.headerTime }}</span>
+    </div>
+
+    <div class="bubble" [class.me]="g.role==='client'" [class.them]="g.role==='customer'"
+      [class.system]="g.role==='system'" *ngFor="let m of g.messages">
+      <div class="text" *ngIf="m.text">{{ m.text }}</div>
+
+      <div class="attachments" *ngIf="m.attachments?.length">
+        <ng-container *ngFor="let a of m.attachments">
+          <div class="att img" *ngIf="a.type.startsWith('image/')">
+            <img [src]="a.url" [alt]="a.name" />
+          </div>
+          <div class="att file" *ngIf="!a.type.startsWith('image/')">
+            <span class="icon">📎</span>
+            <a [href]="a.url || 'javascript:void(0)'" target="_blank">{{ a.name }}</a>
+            <span class="size">{{ formatBytes(a.size) }}</span>
+          </div>
+        </ng-container>
+      </div>
+
+      <div class="tail">
+        <time>{{ timeOnly(m.time) }}</time>
+        <span class="status" *ngIf="m.status">
+          {{ m.status === 'seen' ? '✓✓' : m.status === 'delivered' ? '✓✓' : m.status === 'sent' ? '✓' : '…' }}
+        </span>
+      </div>
+    </div>
+  </div>
+</section>

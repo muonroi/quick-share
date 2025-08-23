@@ -1,0 +1,115 @@
+<div class="app" [class.sidebar-collapsed]="sidebarCollapsed" [class.drawer-open]="sidebarOpen">
+
+  <aside class="sidebar" [attr.aria-expanded]="!sidebarCollapsed">
+    <div class="sidebar-inner">
+      <header class="sb-header">
+        <div class="brand">
+          <span class="brand-icon">⚡</span>
+          <span class="brand-text">Quick-share</span>
+        </div>
+
+        <div class="sb-actions">
+          <!-- NEW: New chat -->
+          <button class="icon-btn plus" title="New chat" aria-label="New chat" (click)="newChat()">＋</button>
+          <!-- Collapse desktop -->
+          <button class="collapse-btn only-desktop" (click)="toggleSidebarDesktop()"
+            [attr.aria-label]="sidebarCollapsed?'Expand sidebar':'Collapse sidebar'">
+            <svg class="chev" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+          </button>
+
+        </div>
+      </header>
+
+      <nav class="sb-nav">
+        <button class="nav-item"><span class="icon">💬</span><span class="text">All chats</span></button>
+        <button class="nav-item"><span class="icon">⭐</span><span class="text">Pinned</span></button>
+        <button class="nav-item"><span class="icon">🗂️</span><span class="text">Folders</span></button>
+      </nav>
+
+      <!-- NEW: History -->
+      <section class="sb-history" *ngIf="sessions.length">
+        <div class="section-label">Chats</div>
+
+        <ul class="history-list">
+          <li class="history-row" *ngFor="let s of sessions">
+            <button class="h-item" [class.active]="s.id === currentSessionId" (click)="openSession(s.id)">
+              <span class="dot">💬</span>
+              <span class="text">{{ s.title }}</span>
+              <time class="time">{{ s.updatedAt | date:'HH:mm' }}</time>
+            </button>
+          </li>
+        </ul>
+      </section>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <button class="hamburger only-mobile" (click)="toggleSidebarMobile()" aria-label="Open sidebar">☰</button>
+      <div class="spacer"></div>
+    </div>
+
+    <div class="chat-layout" (mousedown)="trapFocus($event)">
+
+      <ng-container *ngIf="messages.length === 0; else chatTpl">
+        <section class="home-hero">
+          <div class="hero-center">
+            <h1 #homeHero class="home-title" aria-live="polite" [attr.aria-label]="heroTitle">
+              <span class="type-text">{{ heroRendered }}</span>
+              <span class="caret" *ngIf="showCaret"></span>
+            </h1>
+          </div>
+          <div class="home-prompt">
+            <label tabindex="-1" for="fileInput" class="icon-btn attach" aria-label="Attach files">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 12v8h16v-8M12 16V4m0 0l-4 4m4-4l4 4" fill="none" stroke="currentColor" stroke-width="1.8"
+                  stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <span class="badge" *ngIf="fileCount > 0">{{ fileCount }}</span>
+            </label>
+            <input id="fileInput" type="file" multiple hidden (change)="onFilesChanged($event)" />
+            <input #promptInputEl id="promptInput" type="text" placeholder="Type your answer here..."
+              (keydown.enter)="send()" />
+            <button id="sendBtn" type="button" class="icon-btn send" title="Send" aria-label="Send" (click)="send()">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M21 3L9 15M21 3l-7 19-5-7-7-5 19-7z" fill="none" stroke="currentColor" stroke-width="1.6"
+                  stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          </div>
+        </section>
+      </ng-container>
+
+      <ng-template #chatTpl>
+        <div class="chat-thread">
+          <app-chat-thread class="chat-thread" [messages]="messages"></app-chat-thread>
+        </div>
+
+        <div class="prompt-box">
+          <div class="prompt">
+            <label tabindex="-1" for="fileInput" class="icon-btn attach" aria-label="Attach files">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 12v8h16v-8M12 16V4m0 0l-4 4m4-4l4 4" fill="none" stroke="currentColor" stroke-width="1.8"
+                  stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <span class="badge" *ngIf="fileCount > 0">{{ fileCount }}</span>
+            </label>
+            <input id="fileInput" type="file" multiple hidden (change)="onFilesChanged($event)" />
+            <input #promptInputEl id="promptInput" type="text" placeholder="Type your answer here..."
+              (keydown.enter)="send()" />
+            <button id="sendBtn" type="button" class="icon-btn send" title="Send" aria-label="Send" (click)="send()">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M21 3L9 15M21 3l-7 19-5-7-7-5 19-7z" fill="none" stroke="currentColor" stroke-width="1.6"
+                  stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </ng-template>
+
+    </div>
+  </main>
+</div>
