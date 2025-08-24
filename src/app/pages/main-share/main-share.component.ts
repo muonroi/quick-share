@@ -3,11 +3,12 @@ import { Component, ElementRef, HostListener, OnInit, ViewChild } from '@angular
 import { ChatThreadComponent } from '../../features/chat-thread/chat-thread.component';
 import { ChatMessage } from '../../services/main-share/models/chat-message';
 import { ChatSession } from '../../services/main-share/models/chat-session';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-main-share',
   standalone: true,
-  imports: [CommonModule, ChatThreadComponent],
+  imports: [CommonModule, ChatThreadComponent, FormsModule],
   templateUrl: './main-share.component.html',
   styleUrl: './main-share.component.scss'
 })
@@ -18,27 +19,66 @@ export class MainShareComponent implements OnInit {
   public messages: ChatMessage[] = [];
   public sidebarOpen = false;
   public sidebarCollapsed = false;
-  public heroTitle = 'What are you doing on quick-share?';
+  public heroTitle = 'What are you doing on quick share?';
   public heroRendered = '';
   public showCaret = true;
   private typingIdx = 0;
   private typingTimer?: any;
   public sessions: ChatSession[] = [];
   public currentSessionId: string | null = null;
+  public isMobile = false;
+  public editingId: string | null = null;
+  public editingTitle = '';
   @ViewChild('promptInputEl') promptInputEl?: ElementRef<HTMLInputElement>;
-
+  @ViewChild(ChatThreadComponent) thread?: ChatThreadComponent;
   ngOnInit() {
     this.sidebarCollapsed = window.innerWidth < 768;
     this.sidebarOpen = false;
     this.newChat();
+    this.updateIsMobile();
+
   }
 
   get currentSession(): ChatSession | undefined {
     return this.sessions.find(s => s.id === this.currentSessionId);
   }
+  get canNewChat(): boolean {
+
+    if (!this.sessions?.length) return true;
+    if (!this.currentSession) return true;
+
+
+    return (this.currentSession.messages?.length ?? 0) > 0;
+  }
+
+
+  public trackBySessionId = (_: number, s: ChatSession) => s.id;
+
+  private updateIsMobile() {
+    this.isMobile = window.innerWidth <= 768;
+
+    if (!this.isMobile) this.sidebarOpen = false;
+  }
+
+  /** Dùng chung cho cả desktop & mobile */
+  public toggleSidebar(): void {
+    if (this.isMobile) {
+      this.sidebarOpen = !this.sidebarOpen;
+    } else {
+      this.sidebarCollapsed = !this.sidebarCollapsed;
+    }
+  }
 
   /** Tạo chat mới */
   public newChat() {
+
+    const cur = this.currentSession;
+    if (cur && (cur.messages?.length ?? 0) === 0) {
+      this.promptInputEl?.nativeElement?.focus();
+      return;
+    }
+
+
     const s: ChatSession = {
       id: crypto.randomUUID(),
       title: 'New chat',
@@ -46,24 +86,25 @@ export class MainShareComponent implements OnInit {
       updatedAt: new Date(),
       messages: []
     };
-    this.sessions = [s, ...this.sessions];          // push lên đầu
+    this.sessions = [s, ...this.sessions];
     this.currentSessionId = s.id;
-    this.messages = s.messages;                     // bind sang thread
-    // reset hero typing
-    this.heroRendered = ''; this.typingIdx = 0; this.showCaret = true;
+    this.messages = s.messages;
+
+
+    this.heroRendered = '';
+    this.typingIdx = 0;
+    this.showCaret = true;
     setTimeout(() => this.typeNext(), 50);
   }
 
-  /** Mở session theo id */
   public openSession(id: string) {
     const s = this.sessions.find(x => x.id === id);
     if (!s) return;
     this.currentSessionId = id;
     this.messages = s.messages;
-    this.stopHeroTyping(); this.showCaret = false;  // vào chat mode
+    this.stopHeroTyping(); this.showCaret = false;
   }
 
-  /** Helper đặt title dựa vào message đầu tiên */
   private titleFromMessage(m: ChatMessage): string {
     const base = (m.text || (m.attachments?.[0]?.name ?? 'Untitled')).trim();
     return base.length > 40 ? base.slice(0, 37) + '…' : base || 'New chat';
@@ -71,13 +112,7 @@ export class MainShareComponent implements OnInit {
 
   @HostListener('window:resize')
   onResize() {
-    if (window.innerWidth < 768) {
-      this.sidebarOpen = false;
-      this.sidebarCollapsed = true;
-    } else {
-      this.sidebarOpen = false;
-      this.sidebarCollapsed = false;
-    }
+    this.updateIsMobile();
   }
 
   @HostListener('document:keydown.escape')
@@ -123,17 +158,28 @@ export class MainShareComponent implements OnInit {
     }
   }
 
-  // Nếu chuyển sang chat (có messages), dừng gõ
+
   private onEnterChatMode() { this.stopHeroTyping(); this.showCaret = false; }
 
 
   toggleSidebarMobile() {
-    this.sidebarOpen = !this.sidebarOpen;
+    if (window.innerWidth < 768) {
+      this.sidebarOpen = !this.sidebarOpen;
+      if (this.sidebarOpen) this.sidebarCollapsed = false;
+    } else {
+      this.toggleSidebarDesktop();
+    }
   }
+
   toggleSidebarDesktop() { this.sidebarCollapsed = !this.sidebarCollapsed; }
 
   closeDrawerByBackdrop() {
-    if (this.sidebarOpen) this.sidebarOpen = false;
+    if (window.innerWidth < 768) {
+      this.sidebarOpen = false;
+      this.sidebarCollapsed = true;
+    } else {
+      this.sidebarOpen = false;
+    }
   }
 
   public onFilesChanged(e: Event) {
@@ -142,10 +188,6 @@ export class MainShareComponent implements OnInit {
     this.addFiles(input.files);
 
     input.value = '';
-  }
-
-  public toggleSidebar() {
-    this.sidebarOpen = !this.sidebarOpen;
   }
 
   public onDragOver(e: DragEvent) {
@@ -206,7 +248,7 @@ export class MainShareComponent implements OnInit {
     const text = input?.value?.trim();
     if (!text && !this.files.length) return;
 
-    // đảm bảo có session
+
     if (!this.currentSessionId) this.newChat();
     const s = this.currentSession!;
 
@@ -222,22 +264,22 @@ export class MainShareComponent implements OnInit {
       status: 'sending'
     };
 
-    s.messages.push(msg);              // thêm vào session
-    this.messages = s.messages;        // cập nhật binding (tham chiếu)
+    s.messages.push(msg);
+    this.messages = s.messages;
     s.updatedAt = msg.time as Date;
 
-    // nếu là message đầu tiên → đặt title cho history
+
     if (s.messages.length === 1) s.title = this.titleFromMessage(msg);
 
-    // đưa session vừa cập nhật lên đầu list (giống ChatGPT)
+
     this.sessions = [s, ...this.sessions.filter(x => x.id !== s.id)];
 
-    // clear input/files
+
     this.clearFiles(); if (input) input.value = '';
 
     setTimeout(() => {
       msg.status = 'sent';
-      this.messages = [...s.messages]; // trigger change detection nếu cần
+      this.messages = [...s.messages];
     }, 400);
   }
 
@@ -255,5 +297,68 @@ export class MainShareComponent implements OnInit {
       this.promptInputEl?.nativeElement.blur();
       e.preventDefault();
     }
+  }
+
+
+  /** Bắt đầu rename */
+  public startEdit(s: ChatSession, ev?: Event) {
+    ev?.stopPropagation();
+    this.editingId = s.id;
+    this.editingTitle = s.title ?? '';
+
+    setTimeout(() => document.getElementById('edit-' + s.id)?.focus(), 0);
+  }
+
+  /** Lưu rename */
+  public commitEdit() {
+    if (!this.editingId) return;
+    const s = this.sessions.find(x => x.id === this.editingId);
+    if (!s) { this.editingId = null; return; }
+    const newTitle = (this.editingTitle || '').trim();
+    if (newTitle && newTitle !== s.title) {
+      s.title = newTitle;
+      s.updatedAt = new Date();
+
+      this.sessions = [s, ...this.sessions.filter(x => x.id !== s.id)];
+    } else {
+
+      this.sessions = [...this.sessions];
+    }
+    this.editingId = null;
+    this.editingTitle = '';
+  }
+
+  /** Huỷ rename */
+  public cancelEdit(ev?: Event) {
+    ev?.stopPropagation();
+    this.editingId = null;
+    this.editingTitle = '';
+  }
+
+  /** Phím tắt trong ô rename */
+  public onEditKeydown(ev: KeyboardEvent) {
+    if (ev.key === 'Enter') { ev.preventDefault(); this.commitEdit(); }
+    if (ev.key === 'Escape') { ev.preventDefault(); this.cancelEdit(); }
+  }
+
+  /** Xoá session */
+  public deleteSession(id: string, ev?: Event) {
+    ev?.stopPropagation();
+    if (!confirm('Delete this chat?')) return;
+
+    const isCurrent = this.currentSessionId === id;
+    const newSessions = this.sessions.filter(x => x.id !== id);
+    this.sessions = [...newSessions];
+
+    if (isCurrent) {
+      if (newSessions.length) {
+        this.currentSessionId = newSessions[0].id;
+        this.messages = newSessions[0].messages;
+      } else {
+        this.currentSessionId = null;
+        this.messages = [];
+      }
+    }
+    if (this.editingId === id) { this.editingId = null; this.editingTitle = ''; }
   }
 }

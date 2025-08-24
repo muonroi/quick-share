@@ -17,7 +17,7 @@ export class ChatThreadComponent implements AfterViewInit, OnChanges {
   @Input() groupWindowMinutes = 5;
   @Output() retry = new EventEmitter<string>();
   @ViewChild('wrap') wrap?: ElementRef<HTMLElement>;
-
+  @ViewChild('promptInputEl') promptInputEl?: ElementRef<HTMLInputElement>;
   groups: Array<{
     role: ChatRole;
     name?: string;
@@ -29,6 +29,10 @@ export class ChatThreadComponent implements AfterViewInit, OnChanges {
 
   ngAfterViewInit() { this.recompute(); this.scrollToBottom(true); }
   ngOnChanges(_: SimpleChanges) { this.recompute(); this.scrollToBottom(); }
+
+  public focusPromptInput(): void {
+    this.promptInputEl?.nativeElement?.focus();
+  }
 
   private recompute() {
     const arr = [...(this.messages || [])].sort((a, b) => +new Date(a.time) - +new Date(b.time));

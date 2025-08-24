@@ -5,46 +5,115 @@
       <header class="sb-header">
         <div class="brand">
           <span class="brand-icon">⚡</span>
-          <span class="brand-text">Quick-share</span>
+          <span class="brand-text">Quick share</span>
         </div>
 
         <div class="sb-actions">
-          <!-- NEW: New chat -->
-          <button class="icon-btn plus" title="New chat" aria-label="New chat" (click)="newChat()">＋</button>
-          <!-- Collapse desktop -->
-          <button class="collapse-btn only-desktop" (click)="toggleSidebarDesktop()"
-            [attr.aria-label]="sidebarCollapsed?'Expand sidebar':'Collapse sidebar'">
-            <svg class="chev" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          <!-- New chat -->
+          <button class="toolbar-btn only-expanded" [disabled]="!canNewChat" [attr.aria-disabled]="!canNewChat"
+            [title]="canNewChat ? 'New chat' : 'Type a message first'" aria-label="New chat" (click)="newChat()">
+            <!-- PLUS SVG -->
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                 stroke-linejoin="round" />
             </svg>
           </button>
 
+          <button class="collapse-btn" (click)="toggleSidebar()" [attr.aria-label]="isMobile ? (sidebarOpen ? 'Close sidebar' : 'Open sidebar')
+                                        : (sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar')">
+            <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"
+              [class.point-right]="!isMobile && sidebarCollapsed">
+              <!-- base là chevron-left -->
+              <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+          </button>
         </div>
+
       </header>
 
       <nav class="sb-nav">
+        <button class="nav-item new-chat only-collapsed" (click)="newChat()" title="New chat" aria-label="New chat">
+          <span class="icon">＋</span>
+          <span class="text">New chat</span>
+        </button>
+
         <button class="nav-item"><span class="icon">💬</span><span class="text">All chats</span></button>
         <button class="nav-item"><span class="icon">⭐</span><span class="text">Pinned</span></button>
         <button class="nav-item"><span class="icon">🗂️</span><span class="text">Folders</span></button>
       </nav>
 
       <!-- NEW: History -->
+      <!-- ... phần trên giữ nguyên ... -->
+
+      <!-- History -->
       <section class="sb-history" *ngIf="sessions.length">
         <div class="section-label">Chats</div>
 
         <ul class="history-list">
-          <li class="history-row" *ngFor="let s of sessions">
-            <button class="h-item" [class.active]="s.id === currentSessionId" (click)="openSession(s.id)">
-              <span class="dot">💬</span>
-              <span class="text">{{ s.title }}</span>
-              <time class="time">{{ s.updatedAt | date:'HH:mm' }}</time>
-            </button>
+          <li class="history-row" *ngFor="let s of sessions; trackBy: trackBySessionId">
+            <!-- NORMAL MODE -->
+            <ng-container *ngIf="editingId !== s.id; else editTpl">
+              <button class="h-item" [class.active]="s.id === currentSessionId" (click)="openSession(s.id)">
+                <span class="dot">💬</span>
+                <span class="text">{{ s.title }}</span>
+                <time class="time">{{ s.updatedAt | date:'HH:mm' }}</time>
+              </button>
+
+              <!-- actions là sibling để đứng ngang -->
+              <div class="row-actions only-expanded">
+                <button class="icon-btn sm" title="Rename" (click)="startEdit(s, $event)">
+                  <svg viewBox="0 0 24 24">
+                    <path
+                      d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+                      fill="currentColor" />
+                  </svg>
+                </button>
+                <button class="icon-btn sm danger" title="Delete" (click)="deleteSession(s.id, $event)">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" fill="none" stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </button>
+              </div>
+            </ng-container>
+
+            <!-- EDIT MODE -->
+            <ng-template #editTpl>
+              <div class="h-item edit-mode" (click)="$event.stopPropagation()">
+                <span class="dot">✏️</span>
+                <input [id]="'edit-' + s.id" class="rename-input" type="text" [(ngModel)]="editingTitle"
+                  spellcheck="false" (keydown)="onEditKeydown($event)" (blur)="commitEdit()"
+                  aria-label="Rename chat title" />
+
+                <span class="time"></span>
+              </div>
+
+              <!-- actions là sibling để đứng ngang -->
+              <div class="row-actions only-expanded">
+                <button class="icon-btn sm" title="Save" (mousedown)="$event.preventDefault()" (click)="commitEdit()">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round" />
+                  </svg>
+                </button>
+                <button class="icon-btn sm" title="Cancel" (mousedown)="$event.preventDefault()"
+                  (click)="cancelEdit($event)">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M18 6L6 18M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </button>
+              </div>
+            </ng-template>
           </li>
+
         </ul>
       </section>
+
     </div>
   </aside>
+  <div class="backdrop only-mobile" (click)="closeDrawerByBackdrop()" aria-hidden="true"></div>
 
   <main class="main">
     <div class="topbar">
